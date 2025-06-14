@@ -29,40 +29,35 @@ class FeedbackController extends Controller
      * Store a newly created feedback.
      * This method allows only authenticated tenants to submit feedback.
      */
-    public function store(Request $request)
-    {
-        // Check if the authenticated user is a tenant
-        if (!Auth::guard('sanctum_tenant')->check()) {
-            return response()->json(['message' => 'Unauthorized: Only tenants can provide feedback.'], 403);
-        }
-
-        try {
-            // Validate the incoming request data against the feedback table's schema
-            $validatedData = $request->validate([
-                'comment' => 'required|string', // Feedback text
-                'rating' => 'nullable|integer|min:1|max:5', // Star rating (1-5), nullable
-            ]);
-        } catch (ValidationException $e) {
-            // Return validation errors if any occur
-            return response()->json([
-                'message' => 'Validation Error',
-                'errors' => $e->errors()
-            ], 422);
-        }
-
-        // Get the authenticated tenant's email_id to link the feedback
-        $tenant = Auth::guard('sanctum_tenant')->user();
-        $validatedData['user_email'] = $tenant->email_id;
-
-        // Create the new feedback entry
-        $feedback = Feedback::create($validatedData);
-
-        // Return a success response with the created feedback and its associated tenant
-        return response()->json([
-            'message' => 'Feedback submitted successfully',
-            'feedback' => $feedback->load('tenant')
-        ], 201);
+public function store(Request $request)
+{
+    if (!Auth::guard('sanctum_tenant')->check()) {
+        return response()->json(['message' => 'Unauthorized: Only tenants can provide feedback.'], 403);
     }
+
+    try {
+        $validatedData = $request->validate([
+            'comment' => 'required|string',
+            'rating' => 'nullable|integer|min:1|max:5',
+            // 'payment_id' => 'required|exists:payments,id', // Uncomment if needed
+        ]);
+    } catch (ValidationException $e) {
+        return response()->json([
+            'message' => 'Validation Error',
+            'errors' => $e->errors()
+        ], 422);
+    }
+
+    $tenant = Auth::guard('sanctum_tenant')->user();
+    $validatedData['user_email'] = $tenant->email_address; // <-- FIXED
+
+    $feedback = Feedback::create($validatedData);
+
+    return response()->json([
+        'message' => 'Feedback submitted successfully',
+        'feedback' => $feedback->load('tenant')
+    ], 201);
+}
 
     /**
      * Display the specified feedback.
@@ -94,10 +89,10 @@ class FeedbackController extends Controller
         try {
             // Validate incoming data; 'sometimes' allows partial updates
             $validatedData = $request->validate([
-                'comment' => 'sometimes|string',
-                'rating' => 'nullable|sometimes|integer|min:1|max:5',
-                // user_email is technically part of the ERD, but generally not updated via API
-                'user_email' => 'sometimes|email|exists:tenants,email_id', // Allow changing email if needed by admin
+                'user_email' => 'required|email|exists:tenants,email_address',
+                'payment_id' => 'required|exists:payments,id',
+                'comment' => 'nullable|string',
+                'rating' => 'required|integer|min:1|max:5',
             ]);
         } catch (ValidationException $e) {
             // Return validation errors if any occur

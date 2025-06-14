@@ -113,7 +113,7 @@ Route::middleware('auth:sanctum_administrator')->group(function () {
 
     // List all registered house owners (add this route)
     Route::get('/admin/house-owners', [HouseOwnerAuthController::class, 'index']);
-
+    Route::delete('/admin/houses/{house}', [HouseController::class, 'destroyAdmin']);
     // Example for admin managing user types (requires specific controllers for each)
     // Route::apiResource('admin/tenants', TenantManagementController::class);
     // Route::apiResource('admin/house-owners', HouseOwnerManagementController::class);

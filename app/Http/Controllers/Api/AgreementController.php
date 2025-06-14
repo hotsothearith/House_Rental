@@ -50,13 +50,13 @@ class AgreementController extends Controller
         }
 
         try {
-            $validatedData = $request->validate([
-                'booking_no' => 'required|exists:bookings,id',
-                'house_id' => 'required|exists:houses,id',
-                'house_owner_id' => 'required|exists:house_owners,id',
-                'user_email' => 'required|email|exists:tenants,email_id',
-                'remember' => 'nullable|string',
-            ]);
+$validatedData = $request->validate([
+    'booking_no' => 'required|exists:bookings,id',
+    'house_id' => 'required|exists:houses,id',
+    'house_owner_id' => 'required|exists:house_owners,id',
+    'user_email' => 'required|email|exists:tenants,email_address',
+    'remember' => 'nullable|string',
+]);
         } catch (ValidationException $e) {
             return response()->json([
                 'message' => 'Validation Error',

@@ -151,23 +151,19 @@ public function store(Request $request)
      * Remove the specified house from storage.
      * Requires authentication and user must be the owning House Owner.
      */
-    public function destroy(House $house)
-    {
-        if (!Auth::guard('sanctum_house_owner')->check() || Auth::guard('sanctum_house_owner')->user()->id !== $house->house_owner_id) {
-            return response()->json(['message' => 'Unauthorized: You do not own this house or are not a house owner.'], 403);
-        }
+public function destroyAdmin($id)
+{
+    // Optional: Check for admin authorization if not already handled by middleware
 
-        // Delete associated image from storage
-        if ($house->image && Storage::disk('public')->exists(str_replace(Storage::url(''), '', $house->image))) {
-            Storage::disk('public')->delete(str_replace(Storage::url(''), '', $house->image));
-        }
-
-        $house->delete();
-
-        return response()->json([
-            'message' => 'House deleted successfully'
-        ], 200);
+    $house = \App\Models\House::find($id);
+    if (!$house) {
+        return response()->json(['message' => 'House not found.'], 404);
     }
+
+    $house->delete();
+
+    return response()->json(['message' => 'House deleted successfully.'], 200);
+}
 
     /**
      * Display a listing of all houses for admin.
