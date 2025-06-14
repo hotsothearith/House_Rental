@@ -1,0 +1,31 @@
+YOUR_ADMIN_TOKEN : Bearer 2|0agfBXxeimjXYX9u0HB66RmQVR5KNXDK574PO325ae9beefe
+Tenant_one_token : Bearer 6|4dYKMccpz4wX1o7HxTSj4hbDRAY9we0frYjdHhTU39c8c53c
+house_owner_one_token : Bearer 4|Uzrpw4HHJtQLYNhkwCRQC3eJq6YJApulOMjkSLdY2cca22ec
+
+Use the tenant token in the Authorization header.
+POST /api/bookings (create booking)
+PUT /api/bookings/{booking_id} (update booking)
+DELETE /api/bookings/{booking_id} (delete booking)
+POST /api/payments (make payment)
+GET /api/payments/{payment_id} (view payment)
+PUT /api/payments/{payment_id} (update payment)
+DELETE /api/payments/{payment_id} (delete payment)
+POST /api/feedback (send feedback)
+GET /api/feedback/{feedback_id} (view feedback)
+3. Test House Owner Functions
+Use the house owner token in the Authorization header.
+POST /api/houses (create house)
+PUT /api/houses/{house_id} (update house)
+DELETE /api/houses/{house_id} (delete house)
+GET /api/house-owner/bookings (view bookings)
+PATCH /api/bookings/{booking_id}/status (update booking status)
+GET /api/house-owner/agreements (view agreements)
+GET /api/house-owner/payments (view payments)
+4. Test Admin Functions
+Use the admin token in the Authorization header.
+GET /api/admin/houses
+GET /api/admin/bookings
+GET /api/admin/payments
+GET /api/admin/feedback
+GET /api/admin/house-owners (see all house owners)
+POST/PUT/DELETE /api/agreements (manage agreements)
