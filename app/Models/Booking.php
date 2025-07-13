@@ -25,14 +25,14 @@ class Booking extends Model
         return $this->belongsTo(House::class, 'house_id');
     }
 
-    public function tenant()
+public function tenant()
 {
     return $this->belongsTo(Tenant::class, 'tenant_email', 'email_address');
 }
 
-    public function agreement()
-    {
-        return $this->hasOne(Agreement::class, 'booking_no');
-    }
+public function agreement()
+{
+    return $this->hasOne(Agreement::class, 'booking_no');
+}
 
 }

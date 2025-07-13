@@ -44,7 +44,7 @@ class TenantAuthController extends Controller
 
     $tenant = \App\Models\Tenant::where('email_address', $request->email_address)->first();
 
-    if (!$tenant || !\Hash::check($request->password, $tenant->password)) {
+    if (!$tenant || !Hash::check($request->password, $tenant->password)) {
         return response()->json(['message' => 'Invalid credentials'], 401);
     }
 
@@ -64,5 +64,15 @@ class TenantAuthController extends Controller
         return response()->json([
             'message' => 'Tenant logged out successfully'
         ]);
+    }
+     public function index(Request $request)
+    {
+        // The route is already protected by 'auth:sanctum_administrator' middleware,
+        // so an explicit check here might be redundant but adds an extra layer of security.
+        if (!Auth::guard('sanctum_administrator')->check()) {
+            return response()->json(['message' => 'Unauthorized: Only administrators can view all tenants.'], 403);
+        }
+
+        return response()->json(Tenant::all());
     }
 }

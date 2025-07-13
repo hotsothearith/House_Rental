@@ -19,6 +19,21 @@ class PaymentController extends Controller
         $houseOwner = Auth::guard('sanctum_house_owner')->user();
         return response()->json(Payment::where('house_owner_id', $houseOwner->id)->with('house', 'tenant', 'houseOwner')->paginate(10));
     }
+     public function tenantPayments(Request $request)
+    {
+        if (!Auth::guard('sanctum_tenant')->check()) {
+            return response()->json(['message' => 'Unauthorized: Only tenants can view their own payments.'], 403);
+        }
+
+        $tenant = Auth::guard('sanctum_tenant')->user();
+
+ 
+        $payments = Payment::where('user_email', $tenant->email_address)
+                            ->with('house', 'tenant') // Eager load related house and tenant if needed
+                            ->paginate(10); // Or use ->get() if you don't need pagination
+
+        return response()->json($payments);
+    }
 
     public function indexAdmin(Request $request)
     {

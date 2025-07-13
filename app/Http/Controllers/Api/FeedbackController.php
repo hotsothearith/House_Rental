@@ -8,13 +8,10 @@ use App\Models\Tenant; // Make sure to import the Tenant model
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
-
+use App\Http\Resources\FeedbackResource; // Ensure you have a FeedbackResource for formatting responses
 class FeedbackController extends Controller
 {
-    /**
-     * Display a listing of all feedback for administrators.
-     * This method allows only authenticated administrators to view all feedback entries.
-     */
+
     public function indexAdmin(Request $request)
     {
         // Check if the authenticated user is an administrator
@@ -25,10 +22,7 @@ class FeedbackController extends Controller
         return response()->json(Feedback::with('tenant')->paginate(10));
     }
 
-    /**
-     * Store a newly created feedback.
-     * This method allows only authenticated tenants to submit feedback.
-     */
+
 public function store(Request $request)
 {
     if (!Auth::guard('sanctum_tenant')->check()) {
@@ -37,9 +31,9 @@ public function store(Request $request)
 
     try {
         $validatedData = $request->validate([
+            'payment_id' => 'required|exists:payments,id', // Require payment_id
             'comment' => 'required|string',
             'rating' => 'nullable|integer|min:1|max:5',
-            // 'payment_id' => 'required|exists:payments,id', // Uncomment if needed
         ]);
     } catch (ValidationException $e) {
         return response()->json([
@@ -49,20 +43,18 @@ public function store(Request $request)
     }
 
     $tenant = Auth::guard('sanctum_tenant')->user();
-    $validatedData['user_email'] = $tenant->email_address; // <-- FIXED
+    $validatedData['user_email'] = $tenant->email_address;
 
     $feedback = Feedback::create($validatedData);
 
+    // Eager load tenant and payment.house
     return response()->json([
         'message' => 'Feedback submitted successfully',
-        'feedback' => $feedback->load('tenant')
+        'feedback' => $feedback->load('tenant', 'payment.house')
     ], 201);
 }
 
-    /**
-     * Display the specified feedback.
-     * This method allows the tenant who submitted the feedback, or an administrator, to view it.
-     */
+
     public function show(Feedback $feedback)
     {
         // Check authorization: tenant who submitted it OR an administrator
@@ -75,10 +67,7 @@ public function store(Request $request)
         return response()->json(['message' => 'Unauthorized to view this feedback.'], 403);
     }
 
-    /**
-     * Update the specified feedback.
-     * This method is primarily intended for administrators to update feedback (e.g., change status, correct details).
-     */
+
     public function update(Request $request, Feedback $feedback)
     {
         // Check if the authenticated user is an administrator
@@ -112,10 +101,7 @@ public function store(Request $request)
         ]);
     }
 
-    /**
-     * Remove the specified feedback.
-     * This method allows only authenticated administrators to delete feedback.
-     */
+
     public function destroy(Feedback $feedback)
     {
         // Check if the authenticated user is an administrator
@@ -130,5 +116,23 @@ public function store(Request $request)
         return response()->json([
             'message' => 'Feedback deleted successfully'
         ], 200);
+    }
+        public function houseOwnerFeedback(Request $request)
+    {
+        $houseOwner = Auth::user(); // Assuming the authenticated user is the house owner
+
+        if (!$houseOwner) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $feedbacks = Feedback::with(['tenant', 'house']) // Ensure these relationships are defined in your Feedback model
+            ->whereHas('house', function ($query) use ($houseOwner) {
+                // IMPORTANT: Qualify 'house_owner_id' with the table name 'houses'
+                $query->where('houses.house_owner_id', $houseOwner->id);
+            })
+            ->get(); // This is the line where the query is executed, causing the error.
+
+        // Return the collection using your FeedbackResource
+        return FeedbackResource::collection($feedbacks);
     }
 }

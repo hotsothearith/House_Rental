@@ -8,9 +8,28 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
-
+use App\Http\Resources\UserResource;
+use App\Models\Tenant;
+use App\Models\HouseOwner;
 class AdministratorAuthController extends Controller
 {
+    public function indexTenants()
+    {
+        // Ensure authentication for admin if not handled by middleware
+        // if (!Auth::guard('sanctum_administrator')->check()) {
+        //     return response()->json(['message' => 'Unauthorized: Only administrators can access this resource.'], 403);
+        // }
+        return UserResource::collection(Tenant::paginate(10)); // Or just Tenant::all() if not paginating
+    }
+
+    public function indexHouseOwners()
+    {
+        // Ensure authentication for admin if not handled by middleware
+        // if (!Auth::guard('sanctum_administrator')->check()) {
+        //     return response()->json(['message' => 'Unauthorized: Only administrators can access this resource.'], 403);
+        // }
+        return UserResource::collection(HouseOwner::paginate(10)); // Or just HouseOwner::all()
+    }
     public function register(Request $request)
     {
         try {

@@ -4,18 +4,16 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\House;
-use App\Models\HouseOwner; // Ensure this is imported
+use App\Models\HouseOwner;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use App\Http\Resources\HouseResource; // Ensure this is imported
+// Make sure to import HouseOwner as you're using it, or remove if not used in this specific controller.
 
 class HouseController extends Controller
 {
-    /**
-     * Display a listing of the houses.
-     * Accessible by anyone.
-     */
     public function index(Request $request)
     {
         $houses = House::query();
@@ -44,67 +42,68 @@ class HouseController extends Controller
         }
         // Add more filters as needed
 
-        return response()->json($houses->paginate(10));
+        // Use the HouseResource to transform the paginated results
+        return HouseResource::collection($houses->paginate(10));
     }
 
-    /**
-     * Store a newly created house in storage.
-     * Requires authentication and user must be a House Owner.
-     */
-public function store(Request $request)
-{
-    if (!Auth::guard('sanctum_house_owner')->check()) {
-        return response()->json(['message' => 'Unauthorized: Only house owners can post houses.'], 403);
+    public function store(Request $request)
+    {
+        // Use Sanctum's current authenticated user for authorization and owner ID
+        $houseOwner = Auth::guard('sanctum_house_owner')->user();
+
+        if (!$houseOwner) {
+            return response()->json(['message' => 'Unauthorized: Only house owners can post houses.'], 403);
+        }
+
+        try {
+            $validated = $request->validate([
+                'address' => 'required|string|max:100',
+                'house_city' => 'required|string|max:20',
+                'house_district' => 'required|string|max:20',
+                'house_state' => 'required|string|max:20',
+                'descriptions' => 'nullable|string', // Keep 'descriptions' if that's your DB column name
+                'price' => 'required|integer',
+                'house_type' => 'required|string|max:20',
+                'rooms' => 'required|integer',
+                'furnitures' => 'nullable|string|max:30',
+                'variation' => 'nullable|string|max:30',
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                // 'house_owner_id' is automatically set, no need for validation here if using authenticated user
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Validation Error',
+                'errors' => $e->errors()
+            ], 422);
+        }
+
+        // Set house_owner_id from the authenticated user
+        $validated['house_owner_id'] = $houseOwner->id;
+
+        if ($request->hasFile('image')) {
+     $path = $request->file('image')->store('house_images', 'public');
+    $validated['image'] = $path;
+ }
+
+ $house = House::create($validated);
+
+    // Use HouseResource to transform the created house, including image_url
+    $house->image_url = $house->image ? asset('storage/' . $house->image) : null;
+
+ return response()->json($house);
     }
 
-    try {
-        $validated = $request->validate([
-            'address' => 'required|string|max:100',
-            'house_city' => 'required|string|max:20',
-            'house_district' => 'required|string|max:20',
-            'house_state' => 'required|string|max:20',
-            'descriptions' => 'nullable|string',
-            'price' => 'required|integer',
-            'house_type' => 'required|string|max:20',
-            'rooms' => 'required|integer',
-            'furnitures' => 'nullable|string|max:30',
-            'variation' => 'nullable|string|max:30',
-            'image' => 'nullable|string|max:120',
-        ]);
-    } catch (ValidationException $e) {
-        return response()->json([
-            'message' => 'Validation Error',
-            'errors' => $e->errors()
-        ], 422);
-    }
-
-    $houseOwner = Auth::guard('sanctum_house_owner')->user();
-    $validated['house_owner_id'] = $houseOwner->id;
-
-    $house = \App\Models\House::create($validated);
-
-    return response()->json([
-        'message' => 'House created successfully',
-        'house' => $house
-    ], 201);
-}
-
-    /**
-     * Display the specified house.
-     * Accessible by anyone.
-     */
     public function show(House $house)
     {
-        return response()->json($house->load('houseOwner')); // Eager load houseOwner
+        // Use HouseResource to transform a single house, including image_url
+        return new HouseResource($house->load('houseOwner')); // Eager load houseOwner and transform
     }
 
-    /**
-     * Update the specified house in storage.
-     * Requires authentication and user must be the owning House Owner.
-     */
     public function update(Request $request, House $house)
     {
-        if (!Auth::guard('sanctum_house_owner')->check() || Auth::guard('sanctum_house_owner')->user()->id !== $house->house_owner_id) {
+        $houseOwner = Auth::guard('sanctum_house_owner')->user();
+
+        if (!$houseOwner || $houseOwner->id !== $house->house_owner_id) {
             return response()->json(['message' => 'Unauthorized: You do not own this house or are not a house owner.'], 403);
         }
 
@@ -114,13 +113,13 @@ public function store(Request $request)
                 'house_city' => 'sometimes|string|max:20',
                 'house_district' => 'sometimes|string|max:20',
                 'house_state' => 'sometimes|string|max:20',
-                'descriptions' => 'nullable|string',
+                'descriptions' => 'nullable|string', // Keep 'descriptions' if that's your DB column name
                 'price' => 'sometimes|integer|min:0',
                 'house_type' => 'sometimes|string|max:20',
                 'rooms' => 'sometimes|integer|min:1',
                 'furnitures' => 'nullable|string|max:30',
                 'variation' => 'nullable|string|max:30',
-                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // For a single main image
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             ]);
         } catch (ValidationException $e) {
             return response()->json([
@@ -129,54 +128,62 @@ public function store(Request $request)
             ], 422);
         }
 
-        // Handle image update
+        // THIS IS THE CORRECTED IMAGE PROCESSING LOGIC for UPDATE
         if ($request->hasFile('image')) {
-            // Delete old image if it exists
-            if ($house->image && Storage::disk('public')->exists(str_replace(Storage::url(''), '', $house->image))) {
-                Storage::disk('public')->delete(str_replace(Storage::url(''), '', $house->image));
+            // Delete old image if it exists. Make sure $house->image is the relative path from DB.
+            if ($house->image && Storage::disk('public')->exists($house->image)) {
+                Storage::disk('public')->delete($house->image);
             }
             $path = $request->file('image')->store('house_images', 'public');
-            $validatedData['image'] = Storage::url($path);
+            $validatedData['image'] = $path; // <--- ONLY STORE THE RELATIVE PATH IN THE DB
+        } elseif (array_key_exists('image', $validatedData) && $validatedData['image'] === null) {
+            // If the frontend explicitly sent 'image: null' (meaning remove existing image)
+            if ($house->image && Storage::disk('public')->exists($house->image)) {
+                Storage::disk('public')->delete($house->image);
+            }
+            $validatedData['image'] = null; // Set image field to null in DB
+        } else {
+            // If image field was not sent in request, do not touch existing image
+            unset($validatedData['image']);
         }
+
 
         $house->update($validatedData);
 
-        return response()->json([
-            'message' => 'House updated successfully',
-            'house' => $house
-        ]);
+        // Return the updated house using the resource
+        return new HouseResource($house->load('houseOwner')); // Load owner if needed for response
     }
 
-    /**
-     * Remove the specified house from storage.
-     * Requires authentication and user must be the owning House Owner.
-     */
-public function destroyAdmin($id)
-{
-    // Optional: Check for admin authorization if not already handled by middleware
+    public function destroyAdmin($id)
+    {
+        // Authorization check for administrator (consider using middleware for this)
+        if (!Auth::guard('sanctum_administrator')->check()) {
+            return response()->json(['message' => 'Unauthorized: Only administrators can delete houses.'], 403);
+        }
 
-    $house = \App\Models\House::find($id);
-    if (!$house) {
-        return response()->json(['message' => 'House not found.'], 404);
+        $house = House::find($id);
+        if (!$house) {
+            return response()->json(['message' => 'House not found.'], 404);
+        }
+
+        // Delete associated image file
+        if ($house->image && Storage::disk('public')->exists($house->image)) {
+            Storage::disk('public')->delete($house->image);
+        }
+
+        $house->delete();
+
+        return response()->json(['message' => 'House deleted successfully.'], 200);
     }
 
-    $house->delete();
-
-    return response()->json(['message' => 'House deleted successfully.'], 200);
-}
-
-    /**
-     * Display a listing of all houses for admin.
-     * Requires authentication and user must be an Administrator.
-     */
     public function indexAdmin(Request $request)
     {
+        // Authorization check for administrator
         if (!Auth::guard('sanctum_administrator')->check()) {
             return response()->json(['message' => 'Unauthorized: Only administrators can access this resource.'], 403);
         }
 
-        return response()->json(
-            House::with('houseOwner')->paginate(10)
-        );
+        // Use HouseResource collection for admin index as well
+        return HouseResource::collection(House::with('houseOwner')->paginate(10));
     }
 }

@@ -63,10 +63,14 @@ Route::middleware('auth:sanctum_tenant')->group(function () {
     // Create Payment (for a booking/agreement related to tenant)
     Route::post('/payments', [PaymentController::class, 'store']);
     // Read/Update/Delete Payment (only owner of payment, for self-service portal type)
+    Route::get('/payments', [PaymentController::class, 'show']);
+
     Route::get('/payments/{payment}', [PaymentController::class, 'show']);
     Route::put('/payments/{payment}', [PaymentController::class, 'update']);
     Route::delete('/payments/{payment}', [PaymentController::class, 'destroy']);
 
+     // --- NEW ROUTE FOR TENANT PAYMENTS ---
+    Route::get('/tenant/payments', [PaymentController::class, 'tenantPayments']);
     // Feedback
     Route::post('/feedback', [FeedbackController::class, 'store']);
     Route::get('/feedback/{feedback}', [FeedbackController::class, 'show']);
@@ -91,6 +95,8 @@ Route::middleware('auth:sanctum_house_owner')->group(function () {
     Route::get('/house-owner/agreements', [AgreementController::class, 'houseOwnerAgreements']);
     // House Owner can view their related payments
     Route::get('/house-owner/payments', [PaymentController::class, 'houseOwnerPayments']);
+     Route::get('/house-owner/agreements', [AgreementController::class, 'houseOwnerAgreements']);
+      Route::get('/house-owner/feedback', [FeedbackController::class, 'houseOwnerFeedback']);
 });
 
 // Administrator Specific Routes
@@ -115,6 +121,10 @@ Route::middleware('auth:sanctum_administrator')->group(function () {
     Route::get('/admin/house-owners', [HouseOwnerAuthController::class, 'index']);
     Route::delete('/admin/houses/{house}', [HouseController::class, 'destroyAdmin']);
     // Example for admin managing user types (requires specific controllers for each)
+     Route::get('/admin/tenants', [TenantAuthController::class, 'index']);
+
+       Route::get('/admin/tenants', [AdministratorAuthController::class, 'indexTenants']); // Assuming an AdminController
+    Route::get('/admin/house-owners', [AdministratorAuthController::class, 'indexHouseOwners']); // Assuming an AdminController
     // Route::apiResource('admin/tenants', TenantManagementController::class);
     // Route::apiResource('admin/house-owners', HouseOwnerManagementController::class);
     // Route::apiResource('admin/administrators', AdministratorManagementController::class);

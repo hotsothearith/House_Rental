@@ -21,7 +21,7 @@ class House extends Model
         'rooms',
         'furnitures',
         'variation',
-        'image',
+        'image_url',
     ];
 
     public function houseOwner()
@@ -43,4 +43,21 @@ class House extends Model
     {
         return $this->hasMany(Payment::class, 'house_id');
     }
+    public function getImageUrlAttribute()
+{
+        return $this->image ? asset('storage/' . $this->image) : null;
+}
+    public function tenants()
+{
+    return $this->belongsToMany(
+        \App\Models\Tenant::class,
+        'bookings',
+        'house_id',
+        'tenant_id'
+    )->withTimestamps();
+}
+public function feedbacks()
+{
+    return $this->hasMany(Feedback::class);
+}
 }

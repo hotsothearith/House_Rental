@@ -52,4 +52,13 @@ class Tenant extends Authenticatable
         // FIX: Changed 'email_id' back to 'email_address'
         return $this->hasMany(Feedback::class, 'user_email', 'email_address');
     }
+    public function houses()
+{
+    return $this->belongsToMany(
+        \App\Models\House::class,
+        'bookings',
+        'tenant_id',
+        'house_id'
+    )->withTimestamps();
+}
 }

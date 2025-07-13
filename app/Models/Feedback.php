@@ -32,5 +32,15 @@ public function payment()
 {
     return $this->belongsTo(Payment::class, 'payment_id');
 }
-
+public function house()
+{
+    return $this->hasOneThrough(
+        \App\Models\House::class,
+        \App\Models\Payment::class,
+        'id',         // Foreign key on payments table...
+        'id',         // Foreign key on houses table...
+        'payment_id', // Local key on feedback table...
+        'house_id'    // Local key on payments table...
+    );
+}
 }
