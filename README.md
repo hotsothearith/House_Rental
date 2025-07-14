@@ -19,7 +19,7 @@ This is the **Laravel-based RESTful API** backend for the House Rental applicati
 ## 📦 Tech Stack
 
 - **Laravel 10+**
-- **MySQL / MariaDB**
+- **MySQL
 - **Laravel Sanctum** 
 - **Laravel File Storage** – for image upload
 - **CORS** – for cross-origin frontend access
