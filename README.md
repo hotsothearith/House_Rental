@@ -69,5 +69,8 @@ Thunder Client (VS Code)
 
 cURL
 
-Frontend app (linked below)
+8. Frontend app (linked below)
+```bash
+https://github.com/hotsothearith/House-Rental-frontend.git
+```
    
